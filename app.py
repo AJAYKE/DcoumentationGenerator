@@ -2,9 +2,7 @@ import ast
 import csv
 import hashlib
 import inspect
-import os
-from ast import NodeTransformer, fix_missing_locations
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import networkx as nx  # type: ignore
 from flask import Flask  # type: ignore
@@ -13,84 +11,71 @@ from flask import Flask  # type: ignore
 csv_filename = 'processed_functions.csv'
 csv_headers = ['endpoint', 'file_path', 'func_name', 'unique_id', 'docstring']
 
-
+# Function to generate unique ID based on file and function name
 def generate_unique_id(file_path: str, func_name: str) -> str:
-    """Generate a unique ID based on file path and function name."""
     unique_string = f"{file_path}:{func_name}"
     return hashlib.md5(unique_string.encode()).hexdigest()
 
-
+# Function to extract API endpoints from a Flask app
 def extract_api_endpoints(app: Flask) -> Dict[str, List[str]]:
-    """Extract all API endpoints from a Flask app."""
     rules = app.url_map.iter_rules()
     endpoints = {rule.endpoint: list(rule.methods) for rule in rules}
     return endpoints
 
-
-def build_call_graph_for_endpoint(endpoint: str, app: Flask) -> Tuple[nx.DiGraph, Dict[str, str]]:
-    """Build a call graph for a specific API endpoint in a Flask app."""
+# Function to build the function call graph for a specific API endpoint
+def build_call_graph_for_endpoint(endpoint: str, app: Flask) -> nx.DiGraph:
     call_graph = nx.DiGraph()
     func_to_file = {}
-
+    
+    # Inspect the app to find the function corresponding to the endpoint
     view_func = app.view_functions.get(endpoint)
     if not view_func:
         return call_graph, func_to_file
-
+    
     file_path = inspect.getfile(view_func)
-    try:
-        source_lines, start_lineno = inspect.getsourcelines(view_func)
-    except OSError:
-        return call_graph, func_to_file
-
+    source_lines, start_lineno = inspect.getsourcelines(view_func)
+    
+    # Parse the source file to build the call graph
     tree = ast.parse(''.join(source_lines))
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
             func_name = node.name
             call_graph.add_node(func_name)
             func_to_file[func_name] = file_path
+            # Add edges for function calls within this function
             for child in ast.walk(node):
                 if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
                     call_graph.add_edge(func_name, child.func.id)
-
+    
     return call_graph, func_to_file
 
-
+# Function to check if a function has already been processed
 def is_function_processed(unique_id: str) -> bool:
-    """Check if a function has already been processed based on its unique ID."""
-    if not os.path.exists(csv_filename):
+    try:
+        with open(csv_filename, 'r', encoding='utf-8') as csv_file:
+            reader = csv.DictReader(csv_file)
+            return any(row['unique_id'] == unique_id for row in reader)
+    except FileNotFoundError:
         return False
-    with open(csv_filename, 'r', encoding='utf-8') as csv_file:
-        reader = csv.DictReader(csv_file)
-        return any(row['unique_id'] == unique_id for row in reader)
 
-
+# Function to save function details to the CSV
 def save_function_details(endpoint: str, file_path: str, func_name: str, unique_id: str, docstring: str):
-    """Save function details to a CSV file."""
-    if not os.path.exists(csv_filename):
-        with open(csv_filename, 'w', encoding='utf-8') as csv_file:
-            writer = csv.writer(csv_file)
-            writer.writerow(csv_headers)
-
-    with open(csv_filename, 'a', encoding='utf-8') as csv_file:
+    with open(csv_filename, 'a', newline='', encoding='utf-8') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow([endpoint, file_path, func_name, unique_id, docstring])
 
-
-class DocstringInserter(NodeTransformer):
-    """AST transformer to insert a docstring into a function definition."""
-    def __init__(self, docstring: str):
+class DocstringInserter(ast.NodeTransformer):
+    def __init__(self, docstring):
         self.docstring = docstring
         self.inserted = False
 
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
+    def visit_FunctionDef(self, node):
         if not self.inserted:
             node.body.insert(0, ast.Expr(value=ast.Constant(value=self.docstring)))
             self.inserted = True
         return node
 
-
-def get_function_code(file_path: str, func_name: str) -> str:
-    """Retrieve the code of a specific function from a file."""
+def get_function_code(file_path, func_name):
     with open(file_path, 'r', encoding='utf-8') as file:
         tree = ast.parse(file.read(), filename=file_path)
         for node in ast.walk(tree):
@@ -99,24 +84,21 @@ def get_function_code(file_path: str, func_name: str) -> str:
                 end_lineno = node.end_lineno if hasattr(node, 'end_lineno') else None
                 with open(file_path, 'r', encoding='utf-8') as file:
                     lines = file.readlines()
-                    return ''.join(lines[start_lineno:end_lineno])
+                    function_code = ''.join(lines[start_lineno:end_lineno])
+                    return function_code
     return ""
 
-
-def insert_docstring(file_path: str, func_name: str, docstring: str):
-    """Insert a docstring into a specific function in a file."""
+def insert_docstring(file_path, func_name, docstring):
     with open(file_path, 'r', encoding='utf-8') as file:
         tree = ast.parse(file.read(), filename=file_path)
         inserter = DocstringInserter(docstring)
         new_tree = inserter.visit(tree)
-        fixed_tree = fix_missing_locations(new_tree)
+        fixed_tree = ast.fix_missing_locations(new_tree)
 
     with open(file_path, 'w', encoding='utf-8') as file:
         file.write(ast.unparse(fixed_tree))
 
-
-def generate_docstring(function_code: str, child_context: str = "") -> str:
-    """Generate a Google-style Python docstring for a function."""
+def generate_docstring(function_code, child_context=""):
     prompt = f"""
     Generate a Google-style Python docstring for the following function. Only return the docstring, without any additional text.
 
@@ -134,10 +116,27 @@ def generate_docstring(function_code: str, child_context: str = "") -> str:
     #     max_tokens=150
     # )
     # return response.choices[0].text.strip()
-    # Placeholder for actual OpenAI response
-    return "Generated docstring"
 
+def fetch_docstring_from_csv(unique_id: str) -> Optional[str]:
+    with open(csv_filename, 'r', encoding='utf-8') as csv_file:
+        reader = csv.DictReader(csv_file)
+        for row in reader:
+            if row['unique_id'] == unique_id:
+                return row['docstring']
+    return None
 
+# Function to get the child context for a function
+def get_child_context(call_graph: nx.DiGraph, func_name: str, func_to_file: Dict[str, str], processed_functions: Dict[str, str]) -> str:
+    child_context = ""
+    for child in call_graph.successors(func_name):
+        child_file_path = func_to_file[child]
+        child_unique_id = generate_unique_id(child_file_path, child)
+        child_docstring = processed_functions.get(child_unique_id)
+        if child_docstring:
+            child_context += f"Function: {child}\nDocstring: {child_docstring}\n\n"
+    return child_context
+
+# Main function to process the codebase based on API endpoints
 def process_codebase_by_endpoint(app: Flask, specific_endpoint: Optional[str] = None):
     """Process the codebase by generating docstrings for functions, based on API endpoints."""
     endpoints = extract_api_endpoints(app)
@@ -151,6 +150,9 @@ def process_codebase_by_endpoint(app: Flask, specific_endpoint: Optional[str] = 
     for endpoint in selected_endpoints:
         call_graph, func_to_file = build_call_graph_for_endpoint(endpoint, app)
 
+        # Create a dictionary to store processed functions and their docstrings
+        processed_functions = {}
+
         leaves = [node for node in call_graph if call_graph.out_degree(node) == 0]
 
         while leaves:
@@ -160,21 +162,34 @@ def process_codebase_by_endpoint(app: Flask, specific_endpoint: Optional[str] = 
                 unique_id = generate_unique_id(file_path, func_name)
 
                 if is_function_processed(unique_id):
+                    # If already processed, fetch from CSV
+                    processed_functions[unique_id] = fetch_docstring_from_csv(unique_id)
                     continue
 
                 function_code = get_function_code(file_path, func_name)
-                child_context = ""  # Retrieve context from child functions if any
+                
+                # Retrieve context from child functions if any
+                child_context = get_child_context(call_graph, func_name, func_to_file, processed_functions)
+                
+                # Generate the docstring
                 docstring = generate_docstring(function_code, child_context)
 
+                # Insert the docstring into the function and save the file
                 insert_docstring(file_path, func_name, docstring)
 
+                # Save function details to the CSV
                 save_function_details(endpoint, file_path, func_name, unique_id, docstring)
 
+                # Add the processed docstring to the dictionary
+                processed_functions[unique_id] = docstring
+
+                # Remove the processed node from the graph
                 call_graph.remove_node(func_name)
+
+                # Check for new leaves
                 new_leaves.extend([n for n in call_graph.nodes if call_graph.out_degree(n) == 0])
 
             leaves = new_leaves
-
 
 # Example usage
 app = Flask(__name__)
