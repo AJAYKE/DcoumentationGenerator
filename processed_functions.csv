@@ -1,0 +1,134 @@
+file_path,func_name,unique_id,docstring
+./helpers.py,generate_unique_id,9ef24e11352d4c7ff8eb2e182e1fc888,"Generate a unique identifier for a function based on its file path and name.
+
+This function takes the file path and function name as input, and generates a unique identifier
+using the MD5 hash of the concatenation of these two values. The resulting hash is returned as a
+hexadecimal string.
+
+The purpose of this function is to provide a unique identifier for a function that can be used
+to track or reference the function, for example, in logging or monitoring systems.
+
+Args:
+    file_path (str): The full file path of the function.
+    func_name (str): The name of the function.
+
+Returns:
+    str: A unique identifier for the function, based on its file path and name.
+"
+./helpers.py,is_function_processed,c080052fef0f40159e8018102d6171dd,"Checks if a unique ID has been processed in a CSV file.
+
+This function reads a CSV file and checks if the provided unique_id is present in any of the rows. If the file is not found, it returns False.
+
+Args:
+    unique_id (str): The unique identifier to search for in the CSV file.
+
+Returns:
+    bool: True if the unique_id is found in the CSV file, False otherwise.
+
+Raises:
+    FileNotFoundError: If the CSV file is not found.
+"
+./docstring_handler.py,DocstringHandler,0bf39d86d71a5d0ccf2d0cc07cda1184,"Generates docstrings for all methods in a given class.
+
+This function takes the file path and the class name as input, and generates docstrings for all the methods within the class. It uses the `ast` module to parse the file content, find the class definition, and then iterate through the methods within the class.
+
+For each method, it generates a docstring using the `generate_docstring` function, which takes the function code and any context from child functions as input. The generated docstring is then inserted into the original file using the `insert_docstring` function.
+
+Args:
+    filepath (str): The file path containing the class definition.
+    class_name (str): The name of the class for which to generate docstrings.
+
+Raises:
+    FileNotFoundError: If the specified file is not found.
+    IOError: If there is an error reading or writing the file.
+"
+./helpers.py,fetch_docstring_from_csv,8a5ff7808c222fea64973478ad090213,"Fetch the docstring from a CSV file based on a unique identifier.
+
+This function reads a CSV file and searches for a row where the 'unique_id' column matches the provided `unique_id` parameter. If a matching row is found, the function returns the value of the 'docstring' column from that row.
+
+If the CSV file is not found, the function returns `None`.
+
+Args:
+    unique_id (str): The unique identifier to search for in the CSV file.
+
+Returns:
+    str or None: The docstring value from the matching row, or `None` if the file is not found or no matching row is found.
+"
+./helpers.py,save_function_details,fe83447e54a67f6d4a902ea03c527e0e,"Save function details to a CSV file.
+
+This function takes the file path, function name, unique identifier, and function docstring as input, and writes them to a CSV file. If the file does not exist or is empty, it will add the CSV headers before writing the data.
+
+Args:
+    file_path (str): The file path where the function is defined.
+    func_name (str): The name of the function.
+    unique_id (str): A unique identifier for the function.
+    docstring (str): The docstring of the function.
+
+Raises:
+    IOError: If there is an error writing to the CSV file.
+"
+./call_tree.py,CallTree,e1df58fa23ad6a0a4ec90fbcfbc2c8d7,"
+Generates a call tree for a given function in a Python file.
+
+This class provides a way to analyze the call tree of a function within a Python file. It takes the file path and function name as input, and recursively traverses the call graph to build a tree-like structure representing the function calls.
+
+The `get_call_tree` method is the main entry point for this functionality. It performs the following steps:
+
+1. Generates a unique identifier for the function based on its file path and name.
+2. Checks if the function has already been processed by looking up the unique identifier in a CSV file.
+3. Reads the contents of the Python file and parses the abstract syntax tree (AST) using the `ast` module.
+4. Finds the node in the AST that corresponds to the specified function.
+5. Extracts the children (i.e., function calls) of the function node.
+6. Stores the function name, source code, and file path in the class attributes.
+7. Recursively calls `get_call_tree` for each child function, if the child function has not been processed before.
+8. Returns the call tree, source code, and file path mappings.
+
+The class also provides helper methods to:
+- Find the node in the AST that corresponds to a given function name.
+- Extract the children (function calls) from a function node.
+- Determine the file path of a child function based on the current file and imports.
+- Check if a function exists in a given file.
+- Extract the import statements from a file.
+- Find the file path of a module based on the import statements.
+
+Args:
+    None
+
+Attributes:
+    tree (dict): A dictionary that stores the call tree, where the keys are function names and the values are lists of child function names.
+    source_code (dict): A dictionary that stores the source code of each function.
+    func_to_files (dict): A dictionary that maps function names to their corresponding file paths.
+
+Returns:
+    tuple: A tuple containing the call tree, source code, and file path mappings.
+"
+/Users/ajsmac/Desktop/PROJECTS/DcoumentationGenerator/generate_documentation.py,GenerateDocumentation,4133e0f7e74120a12d5cc8d8645afc12,"Generate documentation for a given file or function.
+
+This class provides a way to generate documentation for a Python file or a specific function within the file. It extracts all the functions from the file, generates docstrings for each function, and saves the docstrings to a CSV file.
+
+The `generate_documentation` method is the main entry point for this functionality. It performs the following steps:
+
+1. Extracts all the functions from the given file, or processes a specific function if provided.
+2. For each function, it generates a unique identifier based on the file path and function name.
+3. Checks if the function has already been processed by looking up the unique identifier in a CSV file.
+4. If the function has not been processed, it generates a call tree for the function using the `CallTree` class.
+5. Iterates through the functions in the call tree and generates docstrings for each function using the `DocstringHandler` class.
+6. Inserts the generated docstrings into the original file and saves the function details (file path, function name, unique identifier, and docstring) to a CSV file.
+
+The class also provides helper methods to:
+- Extract all the functions from a given file.
+- Iterate through the functions in the call tree.
+- Process a function and generate its docstring.
+- Get the child context (docstrings of child functions) for a function.
+
+Args:
+    file (str): The file path containing the functions to be documented.
+    function_name (str, optional): The name of the specific function to be documented. If not provided, all functions in the file will be documented.
+
+Raises:
+    FileNotFoundError: If the specified file is not found.
+    SyntaxError: If there is a syntax error in the file.
+
+Context from child functions (if any):
+{child_context}
+"
