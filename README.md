@@ -20,26 +20,28 @@ For this example, we are using **Claude** for docstring generation, but feel fre
 
 There are three objects in this docstring generator.
 
-1.  GenerateDocumentation
+1.  GenerateDocumentation:
+
     Generate documentation for a given file or a specific function.
 
-    This function extracts all the functions from the given file and generates docstrings for each function. If a specific function name is provided, it generates the docstring only for that function.
+         This function extracts all the functions from the given file and generates docstrings for each function. If a specific function name is provided, it generates the docstring only for that function.
 
-    The function first extracts all the functions from the given file using the `extract_all_functions` method. It then iterates through each function and generates a unique ID for the function using the `generate_unique_id` function. If the function has already been processed, it fetches the docstring from a CSV file using the `fetch_docstring_from_csv` function.
+         The function first extracts all the functions from the given file using the `extract_all_functions` method. It then iterates through each function and generates a unique ID for the function using the `generate_unique_id` function. If the function has already been processed, it fetches the docstring from a CSV file using the `fetch_docstring_from_csv` function.
 
-    If the function has not been processed, it generates a call tree for the function using the `get_call_tree` method of the `CallTree` class. It then iterates through the functions in the call tree and generates the docstrings using the `iterate_through_functions` and `processing` methods.
+         If the function has not been processed, it generates a call tree for the function using the `get_call_tree` method of the `CallTree` class. It then iterates through the functions in the call tree and generates the docstrings using the `iterate_through_functions` and `processing` methods.
 
-    If any errors occur during the process, the function skips the function and continues with the next one.
+         If any errors occur during the process, the function skips the function and continues with the next one.
 
-    Args:
-    file (str): The path to the file containing the functions.
-    function_name (str, optional): The name of the specific function to generate the documentation for. If not provided, the function will generate documentation for all functions in the file.
+         Args:
+         file (str): The path to the file containing the functions.
+         function_name (str, optional): The name of the specific function to generate the documentation for. If not provided, the function will generate documentation for all functions in the file.
 
-    Raises:
-    FileNotFoundError: If the file does not exist.
-    SyntaxError: If there is a syntax error in the file.
+         Raises:
+         FileNotFoundError: If the file does not exist.
+         SyntaxError: If there is a syntax error in the file.
 
 2.  CallTree
+
     Generates a call tree for a given function in a Python file.
 
          This class provides a way to analyze the call tree of a function within a Python file. It takes the file path and function name as input, and recursively traverses the call graph to build a tree-like structure representing the function calls.
@@ -75,6 +77,7 @@ There are three objects in this docstring generator.
             tuple: A tuple containing the call tree, source code, and file path mappings.
 
 3.  Docstring Handler
+
     Generates docstrings for a given function or for all the methods in a given class.
 
          This function takes the file path and the class name/function name as input, and generates docstrings for all the methods within the class.
