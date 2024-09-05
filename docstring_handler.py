@@ -26,11 +26,13 @@ PROMPT = '''Please generate a Google-style Python docstring for the above functi
 
 
 class DocstringHandler:
-    """Generates docstrings for all methods in a given class.
+    """Generates docstrings for a given function or for all the methods in a given class.
 
-    This function takes the file path and the class name as input, and generates docstrings for all the methods within the class. It uses the `ast` module to parse the file content, find the class definition, and then iterate through the methods within the class.
+    This function takes the file path and the class name/function name as input, and generates docstrings for all the methods within the class. 
+    It uses the `ast` module to parse the file content, find the class definition, and then iterate through the methods within the class.
 
-    For each method, it generates a docstring using the `generate_docstring` function, which takes the function code and any context from child functions as input. The generated docstring is then inserted into the original file using the `insert_docstring` function.
+    For each method inside the class or for a normal function, it generates a docstring using the `generate_docstring` function, which takes the function code and any context from child functions as input. 
+    The generated docstring is then inserted into the original file using the `insert_docstring` function.
 
     Args:
         filepath (str): The file path containing the class definition.
@@ -40,7 +42,39 @@ class DocstringHandler:
         FileNotFoundError: If the specified file is not found.
         IOError: If there is an error reading or writing the file.
     """
+    def generate_docstring(self, function_code, child_context=""):
+        """Generate a docstring for a function based on the provided code and context.
 
+        Args:
+            function_code (str): The code of the function to generate the docstring for.
+            child_context (str, optional): Any context from child functions that should be included in the docstring. Defaults to an empty string.
+
+        Returns:
+            str: The generated docstring for the function.
+
+        This function takes the code of a function and any relevant context from child functions, and generates a Google-style Python docstring for the function. The docstring is generated using the Anthropic language model, and is formatted to be directly used in the code. The docstring includes a description of the function's logic and purpose, as well as the function's arguments and return value.
+        """
+        prompt = f"""
+
+        Function code:
+        {function_code}
+
+        Context from child functions (if any):
+        {child_context}
+
+        {PROMPT}
+        """
+        messages = [
+            ChatMessage(
+                role="system",
+                content="You are a code managing software engineer who writes clean and precise documentation.",
+            ),
+            ChatMessage(role="user", content=prompt),
+        ]
+        resp = Anthropic(model=MODEL).chat(messages)
+
+        return resp.message.content.strip('"""')
+    
     def generate_docstrings_for_all_methods_in_class(self, filepath, class_name):
         """Generate docstrings for all methods in a class.
 
@@ -101,39 +135,6 @@ class DocstringHandler:
             ):
                 return item
         return None
-
-    def generate_docstring(self, function_code, child_context=""):
-        """Generate a docstring for a function based on the provided code and context.
-
-        Args:
-            function_code (str): The code of the function to generate the docstring for.
-            child_context (str, optional): Any context from child functions that should be included in the docstring. Defaults to an empty string.
-
-        Returns:
-            str: The generated docstring for the function.
-
-        This function takes the code of a function and any relevant context from child functions, and generates a Google-style Python docstring for the function. The docstring is generated using the Anthropic language model, and is formatted to be directly used in the code. The docstring includes a description of the function's logic and purpose, as well as the function's arguments and return value.
-        """
-        prompt = f"""
-
-        Function code:
-        {function_code}
-
-        Context from child functions (if any):
-        {child_context}
-
-        {PROMPT}
-        """
-        messages = [
-            ChatMessage(
-                role="system",
-                content="You are a code managing software engineer who writes clean and precise documentation.",
-            ),
-            ChatMessage(role="user", content=prompt),
-        ]
-        resp = Anthropic(model=MODEL).chat(messages)
-
-        return resp.message.content.strip('"""')
 
     def insert_docstring(
         self, file_path, func_name, docstring, function_code, is_class_func=False

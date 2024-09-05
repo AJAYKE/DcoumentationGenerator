@@ -1,46 +1,55 @@
-# Generating Documentation for Your Project
+# Generating Documentation for Your Codebase
 
-To generate documentation for your project using the Sphinx library, follow these steps:
+This guide will help you generate structured documentation for your project using LLMs (like Claude) and the Sphinx library.
 
-## Prerequisite: Add Docstrings
+## How Does Sphinx Work?
 
-Ensure every function in your codebase has a proper docstring if you want to generate meaningful documentation.
+Sphinx compiles all the docstrings from the files and folders you specify, generating a well-structured, organized documentation. To automate the process of writing docstrings, we can leverage Large Language Models (LLMs) like Claude, GPT, etc.
 
-### Docstring Generator
-
-We also offer a **Docstring Generator** to automate docstring generation for specified files. Simply pass in the files, and it will handle the rest. In fact, the documentation for this codebase is generated using this very tool!
+Once the docstrings are ready, Sphinx will handle the rest, creating documentation from the structured content.
 
 ---
 
-## Step 1: Ensure `__init__.py` Files Are Present
+## Step 1: Docstring Generation Using LLMs
 
-Include an `__init__.py` file in every folder that you want to document. This ensures that the modules are correctly included in the generated documentation.
+### **Docstring Generator**
+
+The **Docstring Generator** automates the creation of docstrings for your code. Pass the files you want to document to the generator, and it will output well-structured docstrings for your functions, classes, and modules.
+
+For this example, we are using **Claude** for docstring generation, but feel free to use any LLM model of your choice.
+
+---
 
 ## Step 2: Setting Up Sphinx
 
-### Instructions:
+### Step 2.1: Ensure `__init__.py` Files Are Present
 
-```bash
-# Create a directory for your documentation
+Make sure that every folder you want to include in the documentation has an `__init__.py` file. This is required for Sphinx to recognize and document the modules.
+
+### Step 2.2: Install and Configure Sphinx
+
+#### Instructions:
+
+````bash
+# Step 1: Create a directory for your documentation
 mkdir docs
 
-# Navigate into the docs directory
+# Step 2: Navigate into the docs directory
 cd docs
 
-# Install Sphinx and additional dependencies
+# Step 3: Install Sphinx and additional dependencies
 pip install sphinx rinohtype sphinx-rtd-theme sphinxcontrib-httpdomain
 
-# Initialize Sphinx configuration
+# Step 4: Initialize the Sphinx configuration
 sphinx-quickstart
 
-# Go back to the project root
+# Step 5: Go back to the project root
 cd ..
 
-# Generate .rst files for every module with an __init__.py file
+# Step 6: Generate .rst files for each module (folders containing __init__.py files)
 sphinx-apidoc -o docs .
 
 # Ensure each folder you want to document has an __init__.py file.
-```
 
 3. Editing Documentation Files
 
@@ -64,7 +73,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.autodoc",
 ]
-```
+````
 
 5. Building the Documentation
    Once everything is set up, build the HTML documentation by running the following command:
@@ -74,8 +83,8 @@ extensions = [
 cd docs
 
 # Build the HTML documentation
-./make.bat html #on windows
-# make html on linux
+./make.bat html    # On Windows
+# make html         # On Linux/Mac
 
 ```
 
